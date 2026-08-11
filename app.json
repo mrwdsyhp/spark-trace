@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.sparktrace"
     },
     "web": {
       "output": "static",
@@ -27,6 +28,13 @@
     },
     "plugins": [
       "expo-router",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aplikasi memerlukan akses ke galeri foto untuk melampirkan bukti laporan."
+        }
+      ],
       [
         "expo-splash-screen",
         {

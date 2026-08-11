@@ -44,17 +44,16 @@ export default function Index() {
         {/* Metric Cards */}
         <View style={styles.row}>
           <View style={styles.metricCard}>
-            <Feather name="zap" size={20} color={COLORS.black} />
-            <Text style={styles.metricLabel}>Arus:</Text>
+            {/* Kelompok Kiri: Ikon dan Label */}
+            <View style={styles.metricLeft}>
+              <Feather name="zap" size={20} color={COLORS.black} />
+              <Text style={styles.metricLabel}>Arus:</Text>
+            </View>
+            
+            {/* Bagian Kanan: Nilai */}
             <Text style={styles.metricValue}>{arus}</Text>
           </View>
-          <View style={styles.metricCard}>
-            <Feather name="power" size={20} color={COLORS.black} />
-            <Text style={styles.metricLabel}>Daya:</Text>
-            <Text style={styles.metricValue}>{daya}</Text>
-          </View>
         </View>
-
         {/* Map Card */}
         <TouchableOpacity
           style={styles.mapCard}
@@ -69,19 +68,17 @@ export default function Index() {
         <View style={styles.row}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push("/notifikasi")}
+            onPress={() => router.push("/laporan")}
           >
-            <Feather name="bell" size={20} color={COLORS.black} />
-            <Feather name="chevron-right" size={18} color={COLORS.black} />
+            <Feather name="camera" size={20} color={COLORS.black} />
+            <Text style={styles.actionText}>Laporan</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => setShowRekomendasi(true)}
+            onPress={() => router.push("/notifikasi")}
           >
-            <View style={styles.infoIconWrap}>
-              <Feather name="info" size={14} color={COLORS.white} />
-            </View>
-            <Feather name="chevron-right" size={18} color={COLORS.black} />
+            <Feather name="alert-triangle" size={20} color={COLORS.black} />
+            <Text style={styles.actionText}>Peringatan</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -123,10 +120,24 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, marginLeft: "auto" },
 
   row: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  metricCard: { flex: 1, backgroundColor: COLORS.primaryBlue, borderRadius: 16, padding: 16 },
-  metricLabel: { fontSize: 13, color: COLORS.black, marginTop: 8 },
+// -- BAGIAN YANG DIUBAH --
+  metricCard: { 
+    flex: 1, 
+    flexDirection: "row", // Membuat elemen berbaris ke samping
+    justifyContent: "space-between", // Mendorong bagian kiri dan kanan ke ujung
+    alignItems: "center", // Memastikan teks dan ikon sejajar di tengah
+    backgroundColor: COLORS.primaryBlue, 
+    borderRadius: 16, 
+    padding: 16 
+  },
+  metricLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8, // Memberi jarak antara ikon petir dan teks "Arus:"
+  },
+  metricLabel: { fontSize: 14, color: COLORS.black }, // Menghapus marginTop yang sebelumnya ada
   metricValue: { fontSize: 18, fontWeight: "700", color: COLORS.black },
-
+  // -------------------------
   mapCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: COLORS.primaryBlue, borderRadius: 16,
@@ -134,11 +145,8 @@ const styles = StyleSheet.create({
   },
 
   actionCard: {
-    flex: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    flex: 1, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8,
     backgroundColor: COLORS.primaryBlue, borderRadius: 16, padding: 16,
   },
-  infoIconWrap: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: COLORS.black, alignItems: "center", justifyContent: "center",
-  },
+  actionText: { fontSize: 14, fontWeight: "600", color: COLORS.black },
 });
