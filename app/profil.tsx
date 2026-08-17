@@ -1,16 +1,19 @@
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/colors";
-
-const DEVICE_INFO = {
-  name: "Spark-Trace Guard v2.4",
-  firmware: "v1.0.8-stable",
-  ip: "192.168.1.104",
-  online: true,
-};
+import { getRegisteredHouse } from "../utils/houseStorage";
 
 export default function Profil() {
+  const router = useRouter();
+  const [registeredHouse, setRegisteredHouse] = useState<any>(null);
+
+  useEffect(() => {
+    getRegisteredHouse().then(setRegisteredHouse);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.container}>
@@ -21,66 +24,36 @@ export default function Profil() {
           </View>
           <View style={{ marginLeft: 12 }}>
             <Text style={styles.name}>Fathur</Text>
-            <Text style={styles.subtitle}>Jl. Kadipaten Kidul No. 12, Yogyakarta</Text>
+            <Text style={styles.subtitle}>
+              {registeredHouse ? registeredHouse.address : "Jl. Kadipaten Kidul No. 12, Yogyakarta"}
+            </Text>
           </View>
         </View>
 
-        {/* Data Rumah */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Data Rumah</Text>
-          <View style={styles.rowBetween}>
-            <Text style={styles.label}>Alamat</Text>
-            <Text style={styles.value}>Jl. Kadipaten Kidul No. 12</Text>
-          </View>
-          <View style={[styles.rowBetween, { marginTop: 8 }]}>
-            <Text style={styles.label}>Jumlah Penghuni</Text>
-            <Text style={styles.value}>4 orang</Text>
-          </View>
-        </View>
-
-        {/* Perangkat Terpasang */}
-        <View style={styles.card}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>Perangkat Terpasang</Text>
-            <View style={styles.statusChip}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: DEVICE_INFO.online ? COLORS.aman : COLORS.textGray },
-                ]}
-              />
-              <Text style={styles.statusChipText}>
-                {DEVICE_INFO.online ? "Online" : "Offline"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.rowBetween, { marginTop: 12 }]}>
-            <Text style={styles.label}>Perangkat</Text>
-            <Text style={styles.value}>{DEVICE_INFO.name}</Text>
-          </View>
-          <View style={[styles.rowBetween, { marginTop: 8 }]}>
-            <Text style={styles.label}>Firmware</Text>
-            <Text style={styles.value}>{DEVICE_INFO.firmware}</Text>
-          </View>
-          <View style={[styles.rowBetween, { marginTop: 8 }]}>
-            <Text style={styles.label}>IP Address</Text>
-            <Text style={styles.value}>{DEVICE_INFO.ip}</Text>
-          </View>
-        </View>
-
-        {/* Menu */}
-        <TouchableOpacity style={styles.menuItem}>
-          <Feather name="key" size={18} color={COLORS.black} />
-          <Text style={styles.menuText}>Ubah Password</Text>
+        {/* Quick Actions */}
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/pengaturan")}>
+          <Feather name="settings" size={18} color={COLORS.black} />
+          <Text style={styles.menuText}>Pengaturan Rumah</Text>
           <Feather name="chevron-right" size={18} color={COLORS.textGray} style={{ marginLeft: "auto" }} />
         </TouchableOpacity>
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutButton}>
-          <Feather name="log-out" size={18} color={COLORS.kritis} />
-          <Text style={styles.logoutText}>Keluar</Text>
-        </TouchableOpacity>
+        {/* Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Mode Monitoring</Text>
+          <Text style={styles.value}>Single-House Monitoring</Text>
+          <Text style={styles.subtitle}>
+            {registeredHouse ? `Rumah: ${registeredHouse.name} (${registeredHouse.id})` : "Belum ada rumah terdaftar"}
+          </Text>
+        </View>
+
+        {/* App Info */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Informasi Aplikasi</Text>
+          <View style={styles.rowBetween}>
+            <Text style={styles.label}>Versi</Text>
+            <Text style={styles.value}>1.0.0</Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -109,25 +82,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: COLORS.textGray },
   value: { fontSize: 13, fontWeight: "600", color: COLORS.black },
 
-  statusChip: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: COLORS.white, borderRadius: 20,
-    paddingHorizontal: 8, paddingVertical: 4,
-  },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  statusChipText: { fontSize: 11, fontWeight: "600", color: COLORS.black },
-
   menuItem: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#F5F6F8", borderRadius: 16,
     padding: 16, marginBottom: 12, gap: 12,
   },
   menuText: { fontSize: 14, fontWeight: "600", color: COLORS.black },
-
-  logoutButton: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: COLORS.kritis,
-    borderRadius: 16, padding: 14, gap: 8, marginTop: 8,
-  },
-  logoutText: { fontSize: 14, fontWeight: "700", color: COLORS.kritis },
 });

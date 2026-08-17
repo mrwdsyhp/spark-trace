@@ -1,79 +1,92 @@
 import { Feather } from "@expo/vector-icons";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../constants/colors";
-
-type Peringatan = {
-  id: string;
-  pesan: string;
-  waktu: string;
-  level: "waspada" | "kritis";
-};
-
-const MOCK_PERINGATAN: Peringatan[] = [
-  {
-    id: "w-1",
-    pesan: "Arus melebihi batas aman di Node A — terdeteksi lonjakan 8.2 A pada jalur utama Jl. Malioboro.",
-    waktu: "10 menit lalu",
-    level: "kritis",
-  },
-  {
-    id: "w-2",
-    pesan: "Koneksi sensor terputus di Node C (Kotabaru). Data tidak diterima sejak 30 menit terakhir.",
-    waktu: "32 menit lalu",
-    level: "kritis",
-  },
-  {
-    id: "w-3",
-    pesan: "Fluktuasi tegangan terdeteksi di Node B. Tegangan turun ke 198 V selama 5 detik.",
-    waktu: "1 jam lalu",
-    level: "waspada",
-  },
-  {
-    id: "w-4",
-    pesan: "Suhu kabel di Node D melebihi ambang normal (62 °C). Pantau secara berkala.",
-    waktu: "3 jam lalu",
-    level: "waspada",
-  },
-  {
-    id: "w-5",
-    pesan: "Pemeliharaan rutin Node E dijadwalkan besok pukul 09.00–12.00 WIB.",
-    waktu: "Kemarin, 14:30",
-    level: "waspada",
-  },
-];
+import { fetchAlerts, formatRelativeTime, type Alert } from "../utils/apiService";
+import { getRegisteredHouse } from "../utils/houseStorage";
 
 const ICON = {
-  waspada: { name: "alert-circle" as const, color: COLORS.waspada },
-  kritis: { name: "alert-triangle" as const, color: COLORS.kritis },
+  warning: { name: "alert-circle" as const, color: COLORS.waspada },
+  danger: { name: "alert-triangle" as const, color: COLORS.kritis },
 };
 
 export default function Notifikasi() {
+  const [alerts, setAlerts] = useState<Alert[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [registeredHouse, setRegisteredHouse] = useState<any>(null);
+
+  useEffect(() => {
+    // Load registered house info
+    getRegisteredHouse().then(setRegisteredHouse);
+    
+    // Load alerts
+    fetchAlerts()
+      .then((data) => {
+        setAlerts(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("❌ Gagal fetch /api/alerts:", err.message);
+        setError("Gagal memuat peringatan. Pastikan server backend berjalan.");
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <Text style={styles.heading}>Riwayat Peringatan</Text>
+      {registeredHouse && (
+        <Text style={styles.subheading}>
+          Rumah: {registeredHouse.name} ({registeredHouse.id})
+        </Text>
+      )}
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {MOCK_PERINGATAN.map((item) => {
-          const icon = ICON[item.level];
+      {loading && !error && (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primaryBlue} />
+        </View>
+      )}
 
-          return (
-            <View key={item.id} style={styles.card}>
-              <View style={[styles.iconWrap, { backgroundColor: icon.color + "1A" }]}>
-                <Feather name={icon.name} size={20} color={icon.color} />
+      {error && (
+        <View style={styles.center}>
+          <Feather name="wifi-off" size={32} color={COLORS.textGray} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {alerts && alerts.length === 0 && (
+        <View style={styles.center}>
+          <Feather name="check-circle" size={32} color={COLORS.aman} />
+          <Text style={styles.emptyText}>Tidak ada peringatan aktif</Text>
+        </View>
+      )}
+
+      {alerts && alerts.length > 0 && (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {alerts.map((item) => {
+            const icon = ICON[item.type];
+
+            return (
+              <View key={item.id} style={styles.card}>
+                <View style={[styles.iconWrap, { backgroundColor: icon.color + "1A" }]}>
+                  <Feather name={icon.name} size={20} color={icon.color} />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardText}>{item.description}</Text>
+                  <Text style={styles.cardTime}>{formatRelativeTime(item.time)}</Text>
+                </View>
               </View>
-              <View style={styles.cardBody}>
-                <Text style={styles.cardText}>{item.pesan}</Text>
-                <Text style={styles.cardTime}>{item.waktu}</Text>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -86,10 +99,34 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     paddingHorizontal: 20,
     paddingTop: 8,
+    paddingBottom: 8,
+  },
+  subheading: {
+    fontSize: 13,
+    color: COLORS.textGray,
+    paddingHorizontal: 20,
     paddingBottom: 16,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
+
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 13,
+    color: COLORS.textGray,
+    textAlign: "center",
+    lineHeight: 19,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textGray,
+  },
 
   card: {
     flexDirection: "row",
@@ -114,10 +151,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardBody: { flex: 1 },
-  cardText: {
+  cardTitle: {
     fontSize: 14,
+    fontWeight: "700",
     color: COLORS.black,
-    lineHeight: 20,
+    marginBottom: 2,
+  },
+  cardText: {
+    fontSize: 13,
+    color: COLORS.black,
+    lineHeight: 19,
     marginBottom: 4,
   },
   cardTime: {

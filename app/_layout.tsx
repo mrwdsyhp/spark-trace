@@ -41,8 +41,10 @@ export default function TabLayout() {
         name="rekomendasi"
         options={{ tabBarIcon: ({ color }) => <Feather name={"info"} size={22} color={color} /> }}
       />
-      <Tabs.Screen name="profil" options={{ tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
-      <Tabs.Screen name="laporan" options={{ href: null, tabBarStyle: { display: "none"} }} />
+      <Tabs.Screen name="pengaturan" options={{ tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} /> }} />
+      <Tabs.Screen name="profil" options={{ href: null }} />
+      <Tabs.Screen name="laporan" options={{ href: null }} />
+      <Tabs.Screen name="registrasi" options={{ href: null }} />
     </Tabs>
   );
 }

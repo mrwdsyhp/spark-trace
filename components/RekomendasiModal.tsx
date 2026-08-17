@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { COLORS } from "../constants/colors";
 
@@ -11,17 +11,26 @@ type Rekomendasi = {
   isDone: boolean;
 };
 
-const DUMMY_DATA: Rekomendasi[] = [
-  { id: "1", riskScore: 76, title: "Kurangi beban listrik", description: "Terdeteksi penggunaan daya tinggi bersamaan pada satu jalur kabel", isDone: false },
-  { id: "2", riskScore: 45, title: "Periksa sambungan kabel utama", description: "Fluktuasi arus terdeteksi pada beberapa siklus terakhir", isDone: false },
-  { id: "3", riskScore: 20, title: "Jadwalkan pemeriksaan rutin", description: "Tidak ada anomali signifikan, disarankan pengecekan berkala", isDone: false },
-];
+export default function RekomendasiModal({
+  visible,
+  onClose,
+  items,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  /** Rekomendasi dari /api/mitigations (di-map oleh index.tsx). */
+  items: Rekomendasi[];
+}) {
+  // Salin ke state lokal supaya tombol "Tandai selesai" bisa di-toggle.
+  const [localItems, setLocalItems] = useState<Rekomendasi[]>(items);
 
-export default function RekomendasiModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const [items, setItems] = useState(DUMMY_DATA);
+  // Sinkronkan saat data backend berubah / modal dibuka ulang.
+  useEffect(() => {
+    setLocalItems(items);
+  }, [items]);
 
   const markDone = (id: string) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isDone: true } : i)));
+    setLocalItems((prev) => prev.map((i) => (i.id === id ? { ...i, isDone: true } : i)));
   };
 
   return (
@@ -35,7 +44,7 @@ export default function RekomendasiModal({ visible, onClose }: { visible: boolea
             </TouchableOpacity>
           </View>
           <ScrollView>
-            {items
+            {[...localItems]
               .sort((a, b) => b.riskScore - a.riskScore)
               .map((item) => (
                 <View key={item.id} style={styles.card}>

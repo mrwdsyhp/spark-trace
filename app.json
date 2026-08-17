@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "spark-trace",
-    "slug": "spark-trace",
+    "slug": "spark-trace-gemastik",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -20,7 +20,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.sparktrace"
+      "package": "com.anonymous.sparktrace",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -51,6 +54,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "509199ae-2914-4b8e-b0d2-f3cdb209a0cd"
+      }
     }
   }
 }

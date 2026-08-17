@@ -6,68 +6,23 @@ import {
     type HeatmapLayerSpecification,
     type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
-import type { Feature, FeatureCollection } from "geojson";
-import { useMemo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { COLORS } from "../constants/colors";
+import { fetchHousesGeoJSON, type HousesGeoJSON } from "../utils/apiService";
 
 // CATATAN API: proyek ini memakai @maplibre/maplibre-react-native v11.
 // - <ShapeSource>  -> <GeoJSONSource> (prop `shape` menjadi `data`)
 // - <HeatmapLayer> -> <Layer type="heatmap"> (prop `style` menjadi `paint`,
 //   dengan nama properti kebab-case sesuai MapLibre style spec)
 
-type RiskHouse = {
-  id: string;
-  latitude: number;
-  longitude: number;
-  /** Skor risiko 0-100 dari AI Engine. */
-  riskScore: number;
-};
-
 type RiskMapProps = {
   preview?: boolean;
   onPress?: () => void;
-  /** Opsional: timpa data mock dengan data rumah dari backend. */
-  houses?: RiskHouse[];
 };
 
 // Pusat kamera: [longitude, latitude] — urutan GeoJSON, bukan [lat, lng].
 const YOGYA_COORD: [number, number] = [110.3695, -7.7956];
-
-/**
- * Titik data mock di area Yogyakarta supaya file ini bisa langsung
- * di-test-run tanpa backend. Skor dibuat bervariasi agar gradien
- * heatmap (hijau -> kuning -> merah) terlihat jelas.
- */
-const MOCK_HOUSES: RiskHouse[] = [
-  { id: "h-01", latitude: -7.788, longitude: 110.3636, riskScore: 92 }, // Tugu
-  { id: "h-02", latitude: -7.7928, longitude: 110.366, riskScore: 78 }, // Malioboro
-  { id: "h-03", latitude: -7.79, longitude: 110.375, riskScore: 55 }, // Kotabaru
-  { id: "h-04", latitude: -7.805, longitude: 110.364, riskScore: 34 }, // Alun-Alun Kidul
-  { id: "h-05", latitude: -7.813, longitude: 110.38, riskScore: 15 }, // Umbulharjo
-];
-
-/**
- * Konversi array rumah menjadi GeoJSON FeatureCollection bertipe Point.
- * PENTING: koordinat GeoJSON selalu [longitude, latitude].
- */
-function housesToGeoJSON(houses: RiskHouse[]): FeatureCollection {
-  return {
-    type: "FeatureCollection",
-    features: houses.map(
-      (h): Feature => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [h.longitude, h.latitude],
-        },
-        properties: {
-          id: h.id,
-          riskScore: h.riskScore,
-        },
-      }),
-    ),
-  };
-}
 
 // Basemap raster OSM/CARTO — tanpa API key, tanpa style URL eksternal.
 const OSM_STYLE: StyleSpecification = {
@@ -92,13 +47,16 @@ const OSM_STYLE: StyleSpecification = {
 /**
  * Styling heatmap murni — fluid density blending, tanpa lingkaran kaku.
  *
- * - weight  : kontribusi tiap titik sebanding riskScore (0 -> 0, 100 -> 1)
+ * - weight  : kontribusi tiap titik sebanding risk_score (0 -> 0, 100 -> 1)
  * - color   : gradien berdasarkan kepadatan; density 0 wajib transparan
  * - radius  : membesar mengikuti zoom (z10 -> 15px, z15 -> 40px)
  * - opacity : konstan 0.8
+ *
+ * Data GeoJSON datang langsung dari backend, maka expression memakai
+ * property `risk_score` (bukan `riskScore`).
  */
 const HEATMAP_PAINT: NonNullable<HeatmapLayerSpecification["paint"]> = {
-  "heatmap-weight": ["interpolate", ["linear"], ["get", "riskScore"], 0, 0, 100, 1],
+  "heatmap-weight": ["interpolate", ["linear"], ["get", "risk_score"], 0, 0, 100, 1],
   "heatmap-color": [
     "interpolate",
     ["linear"],
@@ -116,8 +74,36 @@ const HEATMAP_PAINT: NonNullable<HeatmapLayerSpecification["paint"]> = {
   "heatmap-opacity": 0.8,
 };
 
-export default function RiskMap({ preview = false, onPress, houses = MOCK_HOUSES }: RiskMapProps) {
-  const geoJsonData = useMemo(() => housesToGeoJSON(houses), [houses]);
+export default function RiskMap({ preview = false, onPress }: RiskMapProps) {
+  // Data dari backend — semua rumah untuk peta spasial
+  const [geojson, setGeojson] = useState<HousesGeoJSON | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    // Fetch all houses for spatial map display
+    fetchHousesGeoJSON()
+      .then((data) => {
+        if (cancelled) return;
+        setGeojson(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn("❌ Gagal fetch data rumah:", err.message);
+        setError("Gagal memuat data peta. Pastikan server backend berjalan.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const mapContent = (
     <View style={preview ? styles.previewWrap : styles.fullWrap}>
@@ -136,10 +122,25 @@ export default function RiskMap({ preview = false, onPress, houses = MOCK_HOUSES
       >
         <Camera initialViewState={{ center: YOGYA_COORD, zoom: preview ? 12 : 13 }} />
 
-        <GeoJSONSource id="heatmap-source" data={geoJsonData}>
-          <Layer id="heatmap-layer" type="heatmap" paint={HEATMAP_PAINT} />
-        </GeoJSONSource>
+        {geojson && (
+          <GeoJSONSource id="heatmap-source" data={geojson}>
+            <Layer id="heatmap-layer" type="heatmap" paint={HEATMAP_PAINT} />
+          </GeoJSONSource>
+        )}
       </MapLibreMap>
+
+      {loading && (
+        <View style={styles.statusOverlay}>
+          <ActivityIndicator size="small" color={COLORS.primaryBlue} />
+        </View>
+      )}
+
+      {error && (
+        <View style={styles.statusOverlay}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       <Text style={styles.attribution}>© OpenStreetMap contributors</Text>
     </View>
   );
@@ -165,6 +166,21 @@ const styles = StyleSheet.create({
   fullWrap: {
     flex: 1,
     backgroundColor: "#DCE3EE",
+  },
+  statusOverlay: {
+    position: "absolute",
+    top: 8,
+    alignSelf: "center",
+    maxWidth: "80%",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  errorText: {
+    fontSize: 11,
+    color: COLORS.kritis,
+    textAlign: "center",
   },
   attribution: {
     position: "absolute",
